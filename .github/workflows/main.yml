@@ -1,0 +1,58 @@
+name: 'Permasigner'
+description: 'Permanently sign an IPA and generate a deb, useful for CI/CD'
+author: 'Nebula'
+
+inputs:
+  input:
+    description: 'Path to an IPA to permasign'
+    required: true
+    default: "null"
+  output:
+    description: 'Output directory of the deb file'
+    required: false
+    default: "${GITHUB_WORKSPACE}/permasigner-out"
+  source:
+    description: 'Run from source instead of package'
+    required: false
+    default: false
+  entitlements:
+    description: 'Path to an entitlements file to add to the binary'
+    required: false
+    default: "null"
+  args:
+    description: 'Extra args to pass to Permasigner'
+    required: false
+    default: "null"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    
+    - name: Install Permasigner
+      shell: bash
+      run: |
+        if [ "${{ inputs.source }}" == "true" ]; then
+            python3 -m pip install -U git+https://github.com/permasigner/permasigner
+        else
+            python3 -m pip install permasigner
+        fi
+
+        EXTRA_ARGS=""
+
+        if [ "${{ inputs.entitlements }}" != "null" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS -e ${{ inputs.entitlements }}"
+        fi
+
+        if [ "${{ inputs.args }}" != "null" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS ${{ inputs.args }}"
+        fi
+        
+        python3 -m permasigner -p ${{ inputs.input }} -o ${{ inputs.output }} -d $EXTRA_ARGS
+
+branding:
+  icon: box
+  color: purple
